@@ -6,8 +6,8 @@ import polarToCartesian from '../math/polarToCartesian';
 
 export default class LineSystem {
 
-  private static readonly PULSE_INTERVAL_MS = 50;
-  private static readonly LINE_TTL_MS = 1000;
+  private static readonly PULSE_INTERVAL_MS = 40;
+  private static readonly LINE_TTL_MS = 1600;
 
   private readonly drawer: CanvasDrawer;
   private readonly orbitPairs: OrbitPair[];
@@ -80,7 +80,7 @@ export default class LineSystem {
 
     for (const line of this.lines) {
       const lineTTLRatio = (line.expirationTimeMs - this.elapsedTimeMs) / LineSystem.LINE_TTL_MS;
-      this.drawer.setLineWidth(1);
+      this.drawer.setLineWidth(2);
       this.drawer.setRGBA(219, 169, 88, 1 - (1 - lineTTLRatio) * (1 - lineTTLRatio));
       this.drawer.line(line.x1, line.y1, line.x2, line.y2);
     }
