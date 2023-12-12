@@ -54,7 +54,7 @@ export default class LineSystem {
       return;
     }
 
-    for (let timeMs = this.prevPulseTimeMs + LineSystem.PULSE_INTERVAL_MS; timeMs < this.elapsedTimeMs; timeMs += LineSystem.PULSE_INTERVAL_MS) {
+    for (let timeMs = this.prevPulseTimeMs + LineSystem.PULSE_INTERVAL_MS; timeMs <= this.elapsedTimeMs; timeMs += LineSystem.PULSE_INTERVAL_MS) {
       const timeGapMs = this.elapsedTimeMs - timeMs;
       if (timeGapMs > LineSystem.LINE_TTL_MS) continue;
       for (const orbitPair of this.orbitPairs) {

@@ -34,6 +34,14 @@ export default class CanvasDrawer {
     return this.ctx.canvas.height;
   }
 
+  public font(font: string) {
+    this.ctx.font = font;
+  }
+
+  public text(text: string, x: number, y: number) {
+    this.ctx.fillText(text, x, y);
+  }
+
   public circle(x: number, y: number, radius: number) {
     this.ctx.lineWidth = this.lineWidth;
     this.ctx.beginPath();
