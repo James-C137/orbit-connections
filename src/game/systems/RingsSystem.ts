@@ -16,6 +16,8 @@ export default class RingsSystem {
     const width = this.drawer.getViewWidth();
     const height = this.drawer.getViewHeight();
 
+    this.drawer.setLineWidth(6);
+    this.drawer.setRGBA(8, 50, 72, 1);
     this.drawer.circle(width / 2, height / 2, 128);
     this.drawer.circle(width / 2, height / 2, 256);
     this.drawer.circle(width / 2, height / 2, 384);

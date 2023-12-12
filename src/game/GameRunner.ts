@@ -72,28 +72,7 @@ export default class GameRunner {
     this.lineSystem.addOrbitPair(orbit2, orbit5);
     this.lineSystem.addOrbitPair(orbit3, orbit6);
 
-    window.addEventListener('blur', () => {
-      this.pause();
-    });
-
-    window.addEventListener('focus', () => {
-      this.resume();
-    });
-
-    this.resume();
-  }
-
-  public stop() {
-
-  }
-
-  public resume() {
-    this.running = true;
     window.requestAnimationFrame((timestamp: DOMHighResTimeStamp) => this.requestAnimation(timestamp));
-  }
-
-  public pause() {
-    this.running = false;
   }
 
   private requestAnimation(timestamp: DOMHighResTimeStamp) {

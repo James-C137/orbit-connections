@@ -11,14 +11,15 @@ export default class OrbitSystem {
 
   constructor(canvasDrawer: CanvasDrawer, centerX: number, centerY: number) {
     this.drawer = canvasDrawer;
+    this.orbits = [];
+
     this.centerX = centerX;
     this.centerY = centerY;
-    this.orbits = [];
   }
 
-  public update(deltaMilliseconds: number) {
+  public update(deltaTimeMs: number) {
     for (const orbit of this.orbits) {
-      orbit.angleRads += orbit.radsPerSecond * deltaMilliseconds / 1000;
+      orbit.angleRads += orbit.radsPerSecond * deltaTimeMs / 1000;
     }
   }
 
@@ -26,6 +27,8 @@ export default class OrbitSystem {
     for (const orbit of this.orbits) {
       const x = this.centerX + orbit.radius * Math.cos(orbit.angleRads);
       const y = this.centerY + orbit.radius * Math.sin(orbit.angleRads);
+      this.drawer.setLineWidth(3);
+      this.drawer.setRGBA(219, 169, 88, 1);
       this.drawer.circle(x, y, 24);
     }
   }

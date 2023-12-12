@@ -2,11 +2,12 @@ import LineSegment from '../entities/LineSegment';
 import Orbit from '../entities/Orbit';
 import OrbitPair from '../entities/OrbitPair';
 import CanvasDrawer from '../graphics/CanvasDrawer';
+import polarToCartesian from '../math/polarToCartesian';
 
 export default class LineSystem {
 
-  private static readonly LINE_CREATION_INTERVAL = 100;
-  private static readonly TIME_TO_LIVE_MS = 500;
+  private static readonly PULSE_INTERVAL_MS = 50;
+  private static readonly LINE_TTL_MS = 1000;
 
   private readonly drawer: CanvasDrawer;
   private readonly orbitPairs: OrbitPair[];
@@ -14,69 +15,82 @@ export default class LineSystem {
 
   private centerX: number;
   private centerY: number;
-
-  private lineCreationTimerMs;
+  private elapsedTimeMs: number;
+  private prevPulseTimeMs: number;
+  private pulseTimerMs: number;
 
   constructor(canvasDrawer: CanvasDrawer, centerX: number, centerY: number) {
     this.drawer = canvasDrawer;
-    this.centerX = centerX;
-    this.centerY = centerY;
     this.orbitPairs = [];
     this.lines = [];
-    this.lineCreationTimerMs = LineSystem.LINE_CREATION_INTERVAL;
+    this.centerX = centerX;
+    this.centerY = centerY;
+    this.elapsedTimeMs = 0;
+    this.prevPulseTimeMs = 0;
+    this.pulseTimerMs = LineSystem.PULSE_INTERVAL_MS;
   }
 
-  public update(deltaMilliseconds: number) {
-    if (this.lineCreationTimerMs > 0) {
-      this.lineCreationTimerMs -= deltaMilliseconds;
+  public update(deltaTimeMs: number) {
+    this.elapsedTimeMs += deltaTimeMs;
+    this.pulseTimerMs -= deltaTimeMs;
+
+    // Skip if no new lines need to be created
+    if (this.pulseTimerMs > 0) {
       return;
     }
 
-    while (this.lines.length > 0 && this.lines[0].timeToLiveMs <= 0) {
+    this.pulse();
+
+    // Remove stale lines
+    while (this.lines.length > 0 && this.lines[0].expirationTimeMs <= this.elapsedTimeMs) {
       this.lines.shift();
     }
 
-    for (const line of this.lines) {
-      line.timeToLiveMs -= deltaMilliseconds;
+    this.pulseTimerMs += LineSystem.PULSE_INTERVAL_MS;
+  }
+
+  private pulse() {
+    if (this.elapsedTimeMs - this.prevPulseTimeMs < LineSystem.PULSE_INTERVAL_MS) {
+      return;
     }
 
-    for (const orbitPair of this.orbitPairs) {
-      const x1 = this.centerX + orbitPair.orbit1.radius * Math.cos(orbitPair.orbit1.angleRads);
-      const y1 = this.centerY + orbitPair.orbit1.radius * Math.sin(orbitPair.orbit1.angleRads);
-      const x2 = this.centerX + orbitPair.orbit2.radius * Math.cos(orbitPair.orbit2.angleRads);
-      const y2 = this.centerY + orbitPair.orbit2.radius * Math.sin(orbitPair.orbit2.angleRads);
-      this.addLine(x1, y1, x2, y2);
-    } 
+    for (let timeMs = this.prevPulseTimeMs + LineSystem.PULSE_INTERVAL_MS; timeMs < this.elapsedTimeMs; timeMs += LineSystem.PULSE_INTERVAL_MS) {
+      const timeGapMs = this.elapsedTimeMs - timeMs;
+      if (timeGapMs > LineSystem.LINE_TTL_MS) continue;
+      for (const orbitPair of this.orbitPairs) {
+        const radsSinceTimeMs1 = orbitPair.orbit1.radsPerSecond * timeGapMs / 1000;
+        const radsSinceTimeMs2 = orbitPair.orbit2.radsPerSecond * timeGapMs / 1000;
+        const [x1, y1] = polarToCartesian(orbitPair.orbit1.radius, orbitPair.orbit1.angleRads - radsSinceTimeMs1);
+        const [x2, y2] = polarToCartesian(orbitPair.orbit2.radius, orbitPair.orbit2.angleRads - radsSinceTimeMs2);
+        this.addLine(x1 + this.centerX, y1 + this.centerY, x2 + this.centerX, y2 + this.centerY, timeMs + LineSystem.LINE_TTL_MS);
+      } 
+    }
 
-    this.lineCreationTimerMs += LineSystem.LINE_CREATION_INTERVAL;
-    this.lineCreationTimerMs -= deltaMilliseconds;
+    this.prevPulseTimeMs = this.elapsedTimeMs - (this.elapsedTimeMs % LineSystem.PULSE_INTERVAL_MS);
   }
 
   public draw() {
     for (const orbitPair of this.orbitPairs) {
-      const x1 = this.centerX + orbitPair.orbit1.radius * Math.cos(orbitPair.orbit1.angleRads);
-      const y1 = this.centerY + orbitPair.orbit1.radius * Math.sin(orbitPair.orbit1.angleRads);
-      const x2 = this.centerX + orbitPair.orbit2.radius * Math.cos(orbitPair.orbit2.angleRads);
-      const y2 = this.centerY + orbitPair.orbit2.radius * Math.sin(orbitPair.orbit2.angleRads);
-      this.drawer.line(x1, y1, x2, y2);
+      const [x1, y1] = polarToCartesian(orbitPair.orbit1.radius, orbitPair.orbit1.angleRads);
+      const [x2, y2] = polarToCartesian(orbitPair.orbit2.radius, orbitPair.orbit2.angleRads);
+      this.drawer.setLineWidth(2);
+      this.drawer.setRGBA(219, 169, 88, 1);
+      this.drawer.line(x1 + this.centerX, y1 + this.centerY, x2 + this.centerX, y2 + this.centerY);
     } 
 
     for (const line of this.lines) {
-      const lineLifeRatio = line.timeToLiveMs / LineSystem.TIME_TO_LIVE_MS;
-      this.drawer.setOpacity(1 - (1 - lineLifeRatio) * (1 - lineLifeRatio));
+      const lineTTLRatio = (line.expirationTimeMs - this.elapsedTimeMs) / LineSystem.LINE_TTL_MS;
+      this.drawer.setLineWidth(1);
+      this.drawer.setRGBA(219, 169, 88, 1 - (1 - lineTTLRatio) * (1 - lineTTLRatio));
       this.drawer.line(line.x1, line.y1, line.x2, line.y2);
     }
-    this.drawer.setOpacity(1);
   }
 
   public addOrbitPair(orbit1: Orbit, orbit2: Orbit) {
-    this.orbitPairs.push({ orbit1, orbit2 });
+    this.orbitPairs.push({orbit1, orbit2, pulses: []});
   }
 
-  private addLine(x1: number, y1: number, x2: number, y2: number) {
-    this.lines.push({
-      x1, y1, x2, y2,
-      timeToLiveMs: LineSystem.TIME_TO_LIVE_MS
-    });
+  private addLine(x1: number, y1: number, x2: number, y2: number, expirationTimeMs: number) {
+    this.lines.push({x1, y1, x2, y2, expirationTimeMs});
   }
 }

@@ -3,5 +3,5 @@ export default interface LineSegment {
   y1: number;
   x2: number;
   y2: number;
-  timeToLiveMs: number;
+  expirationTimeMs: number;
 }
